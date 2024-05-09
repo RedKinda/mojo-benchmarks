@@ -5,15 +5,12 @@ use std::hint::black_box;
 use std::io::Read;
 use std::mem::MaybeUninit;
 use std::simd::num::SimdFloat;
-use std::simd::{f64x2, StdFloat};
+use std::simd::{f64x64, StdFloat};
 
 #[allow(non_upper_case_globals)]
 const bench_size: usize = 1000000;
 
 const SIMD_COUNT: usize = bench_size / 64;
-
-// Set the SIMD type
-type SimdType = f64x2;
 
 fn softmax(x: &[f64; bench_size]) -> [f64; bench_size] {
     let mut max = x[0];
@@ -38,23 +35,20 @@ fn softmax(x: &[f64; bench_size]) -> [f64; bench_size] {
     probs
 }
 
-fn softmax_simd(x: &[SimdType; SIMD_COUNT]) -> [SimdType; SIMD_COUNT] {
-    let max = x
+fn softmax_simd(x: &[f64x64; SIMD_COUNT]) -> [f64x64; SIMD_COUNT] {
+    let max: f64 = *x
+        .map(|v| v.reduce_max())
         .iter()
-        .fold(SimdType::splat(f64::NEG_INFINITY), |acc, v| {
-            acc.simd_max(*v)
-        })
-        .reduce_max();
-    let max = SimdType::splat(max);
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap();
+    let max = f64x64::splat(max);
 
     let x_exp = x.map(|v| (v - max).exp());
-    let x_exp_sum = x_exp
-        .iter()
-        .fold(SimdType::splat(0.0), |acc, v| acc + v)
-        .reduce_sum();
-    let divide_by = SimdType::splat(x_exp_sum);
+    let x_exp_sum = x_exp.iter().map(|v| v.reduce_sum()).sum();
+    let divide_by = f64x64::splat(x_exp_sum);
+    let probs = x_exp.map(|v| v / divide_by);
 
-    x_exp.map(|v| v / divide_by)
+    probs
 }
 
 fn main() {
@@ -97,13 +91,13 @@ fn main() {
 
     // prepare array of simd vectors
 
-    let mut simd_arr: [SimdType; SIMD_COUNT] = unsafe {
+    let mut simd_arr: [f64x64; SIMD_COUNT] = unsafe {
         #[allow(invalid_value)]
         MaybeUninit::uninit().assume_init()
     };
 
     for i in 0..SIMD_COUNT {
-        simd_arr[i] = SimdType::from_slice(&arr[i * 64..]);
+        simd_arr[i] = f64x64::from_slice(&arr[i * 64..]);
     }
 
     // benchmark this 1000 times, get mean
