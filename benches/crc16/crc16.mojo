@@ -7,14 +7,6 @@ alias type = DType.int8
 alias bench_size = 1000000
 
 
-fn print(s: String):
-    try:
-        var py = Python.import_module("builtins")
-        _ = py.print(py.str(s))
-    except e:
-        pass
-
-
 @always_inline
 fn crc16_naive[poly: Int, len: Int](data: DTypePointer[type]) -> Int:
     # CRC-16-CCITT Algorithm
