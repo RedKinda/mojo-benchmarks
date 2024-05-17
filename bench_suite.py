@@ -1,4 +1,5 @@
 import os
+import signal
 import sys
 import time
 import json
@@ -6,10 +7,15 @@ import json
 
 def save_bench_results(bench_id, name, times, **kwargs):
     print(f"Saving {name} times - mean: {(sum(times) / len(times))*1000}ms")
-    fname = f"bench_times/{bench_id}/{name}_py.txt"
+    fname = f"bench_times/{bench_id}/{name}_py.json"
     to_save = {"mean": sum(times) / len(times), **kwargs, "times": times}
     with open(fname, "w") as f:
         json.dump(to_save, f)
+
+
+def signal_handler(sig, frame):
+    if any(f.startswith("frame: warmup") for f in frame.stack):
+        raise RuntimeError("warmup took longer than bench time! skipping...")
 
 
 def bench(
@@ -33,10 +39,20 @@ def bench(
 
     for fname in functions:
         f = getattr(b, fname)
-        # warmup
-        start = time.time()
-        while time.time() - start < warmup_time:
-            f(input_param)
+
+        def warmup():
+            # warmup
+            signal.signal(signal.SIGALRM, signal_handler)
+            signal.alarm(bench_time)
+            start = time.time()
+            while time.time() - start < warmup_time:
+                f(input_param)
+
+        try:
+            warmup()
+        except RuntimeError as e:
+            print(e)
+            continue
 
         start = time.time()
         times = [start]
