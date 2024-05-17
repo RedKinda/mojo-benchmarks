@@ -105,7 +105,7 @@ def test():
         pyin.append(val)
         mojoin[i] = val.to_float64()
 
-    var res_py = pysoftmax.softmax_native(pyin)
+    var res_py = pysoftmax.bench_softmax_native(pyin)
     var _a = softmax[testsize](mojoin, res_mojo)
     var res_simd_mojo = softmax_simd[testsize](mojoin.load[width=testsize](0))
     var res_simd_proper_mojo = softmax_simd_proper[testsize, 2](

@@ -6,7 +6,7 @@ import time
 bench_size = 100000
 
 # Adapted from https://gist.github.com/oysstu/68072c44c02879a2abf94ef350d1c7c6
-def crc16(data, poly=0x8408):
+def bench_crc16(data, poly=0x8408):
     """
     CRC-16-CCITT Algorithm
     """
@@ -26,11 +26,11 @@ def crc16(data, poly=0x8408):
     return crc & 0xFFFF
 
 
-def initialize(arr_size):
+def initialize():
     from numpy.random import default_rng
 
     rng = default_rng(42)
-    data = rng.integers(0, 256, size=(arr_size,), dtype=np.uint8)
+    data = rng.integers(0, 256, size=(bench_size,), dtype=np.uint8)
     return data
 
 
@@ -42,24 +42,24 @@ def test():
     # }
     s = b"\x31\x32\x33\x34\x35\x36\x37\x38\x39"
     # print as ascii
-    crc = crc16(s)
+    crc = bench_crc16(s)
     assert crc == 0x6E90
 
 
 def main():
     test()
 
-    arr = initialize(bench_size)
+    arr = initialize()
 
     # warm up
-    crc16(arr)
+    bench_crc16(arr)
 
     # print("CRC16: ", crc16(arr))
     times = 10
     # bench
     start = time.time()
     for i in range(times):
-        crc16(arr)
+        bench_crc16(arr)
 
     end = time.time()
     print(f"Mean time: { ((end - start) / times)*1000}ms")

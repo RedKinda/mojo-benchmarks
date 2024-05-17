@@ -5,6 +5,7 @@ import numpy as np
 
 bench_size = 10000
 
+
 def quicksort(data, left, right):
     if left >= right:
         return
@@ -25,6 +26,12 @@ def quicksort(data, left, right):
     quicksort(data, i + 1, right)
 
 
+def bench_quicksort(data):
+    # copy
+    test_data = data.copy()
+    quicksort(test_data, 0, len(test_data) - 1)
+
+
 def test():
     data = [3, 6, 8, 10, 1, 2, 1]
     quicksort(data, 0, len(data) - 1)
@@ -36,11 +43,16 @@ def test():
     assert data == [1, 2, 3, 4]
 
 
+def initialize():
+    rng = np.random.default_rng(42)
+    arr = rng.integers(0, 256, size=(bench_size,), dtype=np.uint8)
+    return arr
+
+
 def main():
     test()
 
-    rng = np.random.default_rng(42)
-    arr = rng.integers(0, 256, size=(bench_size,), dtype=np.uint8)
+    arr = initialize()
 
     # warm up
     test_arr = arr.copy()

@@ -6,11 +6,17 @@ import numpy as np
 bench_size = 128
 
 
-def matmul_np(a, b):
+def bench_matmul_np(pair):
+    a, b = pair
     return np.matmul(a, b)
 
 
-def matmul_native(a, b):
+native_pair = None
+
+
+def bench_matmul_native(pair):
+
+    a, b = pair
     m, n = len(a), len(a[0])
     p = len(b[0])
 
@@ -32,38 +38,44 @@ def test():
     x_np = np.array(x)
     y_np = np.array(y)
 
-    res = matmul_native(x, y)
-    res_np = matmul_np(x_np, y_np)
+    res = bench_matmul_native((x, y))
+    res_np = bench_matmul_np((x_np, y_np))
 
     assert np.allclose(np.array(res), res_np)
     assert np.allclose(res, [[19, 22], [43, 50]])
+
+
+def initialize():
+    rng = np.random.default_rng(42)
+    a = rng.random((bench_size, bench_size))
+    b = rng.random((bench_size, bench_size))
+    return (a, b)
 
 
 def main():
     test()
 
     rng = np.random.default_rng(42)
-    numpy_in_a = rng.random((bench_size, bench_size))
-    numpy_in_b = rng.random((bench_size, bench_size))
+    numpy_in_a, numpy_in_b = initialize()
     native_in_a = numpy_in_a.tolist()
     native_in_b = numpy_in_b.tolist()
 
     # warm up
-    matmul_native(native_in_a, native_in_b)
-    matmul_np(numpy_in_a, numpy_in_b)
+    bench_matmul_native((native_in_a, native_in_b))
+    bench_matmul_np((numpy_in_a, numpy_in_b))
 
     times = 20
     # bench
     start = time.time()
     for i in range(times):
-        matmul_native(native_in_a, native_in_b)
+        bench_matmul_native((native_in_a, native_in_b))
     end = time.time()
 
     print(f"Mean time (native): {((end - start) / times)*1000}ms")
 
     start = time.time()
     for i in range(times):
-        matmul_np(numpy_in_a, numpy_in_b)
+        bench_matmul_np((numpy_in_a, numpy_in_b))
     end = time.time()
 
     print(f"Mean time  (numpy): {((end - start) / times)*1000}ms")

@@ -4,6 +4,7 @@
 
 import sys
 import os
+import time
 from typing import Literal
 
 
@@ -30,12 +31,14 @@ def compile_size(
         f.writelines(lines)
 
 
-def bench_py(name, size):
+def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     print(f"----- Running {name} - python")
     # copy file
     os.system(f"cp benches/{name}/{name}.py tmp/")
     compile_size(name, size, "py")
-    os.system(f"python3 tmp/{name}.py {size}")
+    os.system(
+        f"python3 bench_suite.py tmp.{name} {bench_id} {warmup_time} {bench_time}"
+    )
 
 
 def bench_mojo(name, size):
@@ -62,14 +65,14 @@ size_defaults = {
 }
 
 
-def do_bench(name, size):
+def do_bench(name, size, bench_id):
     path = os.path.join("benches", name, name + ".py")
     if not os.path.exists(path):
         print("no bench named", name)
         return
 
     print(f"Benching {name} (size {size})")
-    bench_py(name, size)
+    bench_py(name, size, bench_id)
     bench_mojo(name, size)
     bench_rust(name, size)
 
@@ -84,12 +87,15 @@ def main():
     if len(sys.argv) < 2:
         # bench all
         print("Benching all")
+        bench_id = f"all_{str(int(time.time()))}"
+        # mkdir under bench_times
+        os.mkdir(f"bench_times/{bench_id}")
 
         for name in os.listdir("benches"):
             if name.startswith("."):
                 continue
 
-            do_bench(name, size_defaults[name])
+            do_bench(name, size_defaults[name], bench_id)
             print("\n--------------------\n")
 
         print("Done all!")
@@ -98,7 +104,7 @@ def main():
     name = sys.argv[1]
     size = sys.argv[2] if len(sys.argv) > 2 else size_defaults[name]
 
-    do_bench(name, size)
+    do_bench(name, size, f"{name}_{size}")
 
     # cleanup tmp
     # os.system("rm -r tmp")
