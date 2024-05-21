@@ -45,13 +45,17 @@ def test():
             raise "Sort failed"
 
 
-fn main() raises:
-    test()
-    # size is 1 arg from sys
-    var arr = stack_allocation[bench_size, type]()
+fn initialize() -> DTypePointer[type]:
+    var arr = DTypePointer[type].alloc(bench_size)
     rand(arr, bench_size)
+    return arr
 
-    var py = Python.import_module("builtins")
+
+fn bench(
+    bench_id: StringRef, bench_time: Int = 5
+) raises -> Dict[StringRef, benchmark.Report]:
+    test()
+    var arr = initialize()
 
     @always_inline
     @parameter
@@ -60,6 +64,21 @@ fn main() raises:
         memcpy[bench_size](temp, arr)
         quicksort(temp, 0, bench_size - 1)
 
-    var r = benchmark.run[worker](max_runtime_secs=5)
+    var r = benchmark.run[worker](
+        min_runtime_secs=bench_time, max_runtime_secs=bench_time
+    )
+
+    var res = Dict[StringRef, benchmark.Report]()
+    res["quicksort"] = r
+    return res
+
+
+fn main() raises:
+    test()
+    var arr = initialize()
+    var py = Python.import_module("builtins")
+
+    var reports = bench("quicksort", 5)
+    var r = reports["quicksort"]
 
     py.print(py.str("Mean time: {}ms").format(r.mean("ms")))

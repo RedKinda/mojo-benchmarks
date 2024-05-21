@@ -43,15 +43,18 @@ fn test() raises:
         raise "Test failed"
 
 
-fn main() raises:
-    test()
-    # size is 1 arg from sys
-    var arr = stack_allocation[bench_size, type]()
+fn initialize() -> DTypePointer[type]:
+    var arr = DTypePointer[type].alloc(bench_size)
     # seed(1)
     rand(arr, bench_size)
+    return arr
 
-    var py = Python.import_module("builtins")
-    # _ = py.print(py.str("Starting benchmark, size {}...").format(size))
+
+fn bench(
+    bench_id: StringRef, bench_time: Int = 5
+) raises -> Dict[StringRef, benchmark.Report]:
+    test()
+    var arr = initialize()
 
     var crc = crc16_naive[0x8408, bench_size](arr)
 
@@ -61,8 +64,16 @@ fn main() raises:
         var bres = crc16_naive[0x8408, bench_size](arr)
         benchmark.keep(bres)  # do not optimize out
 
-    var r = benchmark.run[worker](max_runtime_secs=5)
+    var report = benchmark.run[worker](
+        min_runtime_secs=bench_time, max_runtime_secs=bench_time
+    )
+    var res = Dict[StringRef, benchmark.Report]()
+    res["crc16_naive"] = report
+    return res
 
-    # _ = py.print(py.str("Result: {}, iters: {}").format(res, iters))
 
-    py.print(py.str("Mean time: {}ms").format(r.mean("ms")))
+fn main() raises:
+    var py = Python.import_module("builtins")
+    var reports = bench("crc16_naive", 5)
+    var report = reports["crc16_naive"]
+    py.print(py.str("Mean time: {}ms").format(report.mean("ms")))

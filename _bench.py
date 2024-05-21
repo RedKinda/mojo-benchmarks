@@ -31,6 +31,34 @@ def compile_size(
         f.writelines(lines)
 
 
+def compile_mojo_benchmain(name):
+    # we need to replace the main() function in the mojo file with the contents of bench_suite.mojo
+    with open("bench_suite.mojo", "r") as f:
+        bench_suite = f.readlines()
+
+    newcontents = []
+    with open(f"tmp/{name}.mojo", "r") as f:
+        lines = f.readlines()
+        gotmain = False
+        for i, line in enumerate(lines):
+            if gotmain:
+                if line.startswith("    "):
+                    pass
+                else:
+                    gotmain = False
+                    break
+
+            elif "fn main()" in line:
+                gotmain = True
+            else:
+                newcontents.append(line)
+
+        newcontents.extend(bench_suite)
+
+    with open(f"tmp/{name}.mojo", "w") as f:
+        f.writelines(newcontents)
+
+
 def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     print(f"----- Running {name} - python")
     # copy file
@@ -41,11 +69,12 @@ def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     )
 
 
-def bench_mojo(name, size):
+def bench_mojo(name, size, bench_id, bench_time=5):
     print(f"----- Running {name} - mojo")
     os.system(f"cp benches/{name}/{name}.mojo tmp/")
     compile_size(name, size, "mojo")
-    os.system(f"mojo tmp/{name}.mojo {size}")
+    compile_mojo_benchmain(name)
+    os.system(f"mojo tmp/{name}.mojo {bench_id} {bench_time}")
 
 
 def bench_rust(name, size):
@@ -73,7 +102,7 @@ def do_bench(name, size, bench_id):
 
     print(f"Benching {name} (size {size})")
     bench_py(name, size, bench_id)
-    bench_mojo(name, size)
+    bench_mojo(name, size, bench_id)
     bench_rust(name, size)
 
     print(f"----- Done {name}")

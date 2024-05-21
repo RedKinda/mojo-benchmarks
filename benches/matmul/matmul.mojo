@@ -159,7 +159,9 @@ fn test() raises:
         raise "Test failed (SIMD+Parallel)"
 
 
-fn main() raises:
+fn bench(
+    bench_id: StringRef, bench_time: Int = 5
+) raises -> Dict[StringRef, benchmark.Report]:
     test()
 
     var inp_a = DTypePointer[type].alloc(bench_size * bench_size)
@@ -168,8 +170,7 @@ fn main() raises:
     rand(inp_a, bench_size * bench_size)
     rand(inp_b, bench_size * bench_size)
 
-    var py = Python.import_module("builtins")
-    # _ = py.print(py.str("Starting benchmark, size {}...").format(size))
+    var reports = Dict[StringRef, benchmark.Report]()
 
     var dummy = DTypePointer[type].alloc(bench_size * bench_size)
 
@@ -182,7 +183,7 @@ fn main() raises:
         benchmark.keep(bres)  # do not optimize out
 
     var r = benchmark.run[worker](max_runtime_secs=5)
-    py.print(py.str("Mean time        (native): {}ms").format(r.mean("ms")))
+    reports["matmul"] = r
 
     @always_inline
     @parameter
@@ -193,9 +194,7 @@ fn main() raises:
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd = benchmark.run[worker_simd](max_runtime_secs=5)
-    py.print(
-        py.str("Mean time          (SIMD): {}ms").format(r_simd.mean("ms"))
-    )
+    reports["matmul_simd"] = r_simd
 
     @always_inline
     @parameter
@@ -204,9 +203,7 @@ fn main() raises:
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd_raw = benchmark.run[worker_simd_raw](max_runtime_secs=5)
-    py.print(
-        py.str("Mean time      (raw SIMD): {}ms").format(r_simd_raw.mean("ms"))
-    )
+    reports["matmul_simd_raw"] = r_simd_raw
 
     @always_inline
     @parameter
@@ -219,13 +216,28 @@ fn main() raises:
     var r_simd_parallel = benchmark.run[worker_simd_parallel](
         max_runtime_secs=5
     )
-    py.print(
-        py.str("Mean time (SIMD+parallel): {}ms").format(
-            r_simd_parallel.mean("ms")
-        )
-    )
+    reports["matmul_simd_parallel"] = r_simd_parallel
 
     # free memory
     inp_a.free()
     inp_b.free()
     dummy.free()
+
+    return reports
+
+
+fn main() raises:
+    test()
+
+    var reports = bench("matmul", 5)
+
+    var py = Python.import_module("builtins")
+
+    for pair in reports.items():
+        var fn_name = pair[].key
+        var report = pair[].value
+        py.print(
+            py.str("Mean time for {} (ms): {}").format(
+                fn_name, report.mean("ms")
+            )
+        )

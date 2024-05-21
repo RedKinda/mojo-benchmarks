@@ -6,7 +6,7 @@ import json
 
 
 def save_bench_results(bench_id, name, times, **kwargs):
-    print(f"Saving {name} times - mean: {(sum(times) / len(times))*1000}ms")
+    print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
     fname = f"bench_times/{bench_id}/{name}_py.json"
     to_save = {"mean": sum(times) / len(times), **kwargs, "times": times}
     with open(fname, "w") as f:
@@ -14,7 +14,18 @@ def save_bench_results(bench_id, name, times, **kwargs):
 
 
 def signal_handler(sig, frame):
-    if any(f.startswith("frame: warmup") for f in frame.stack):
+    python_slow = False
+    try:
+        while frame:
+            if "_SPECIAL_WARMUP_VAR" in frame.f_locals:
+                python_slow = True
+                break
+            frame = frame.f_back
+
+    except Exception as e:
+        print(e)
+
+    if python_slow:
         raise RuntimeError("warmup took longer than bench time! skipping...")
 
 
@@ -35,6 +46,8 @@ def bench(
     test = getattr(b, "test")
     input_param = getattr(b, "initialize")()
 
+    bench_time_ns = bench_time * 1000 * 1000 * 1000
+
     test()
 
     for fname in functions:
@@ -42,6 +55,7 @@ def bench(
 
         def warmup():
             # warmup
+            _SPECIAL_WARMUP_VAR = "warmup"
             signal.signal(signal.SIGALRM, signal_handler)
             signal.alarm(bench_time)
             start = time.time()
@@ -54,11 +68,11 @@ def bench(
             print(e)
             continue
 
-        start = time.time()
+        start = time.perf_counter_ns()
         times = [start]
-        while time.time() - start < bench_time:
+        while time.perf_counter_ns() - start < bench_time_ns:
             f(input_param)
-            times.append(time.time())
+            times.append(time.perf_counter_ns())
 
         diffs = [times[i] - times[i - 1] for i in range(1, len(times))]
         save_bench_results(

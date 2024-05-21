@@ -143,16 +143,15 @@ def test():
             raise "Test fail"
 
 
-fn main() raises:
+fn bench(
+    bench_id: StringRef, bench_time: Int = 5
+) raises -> Dict[StringRef, benchmark.Report]:
     test()
 
     var arr = stack_allocation[bench_size, type]()
-    # seed(1)
     rand(arr, bench_size)
 
-    var py = Python.import_module("builtins")
-    # _ = py.print(py.str("Starting benchmark, size {}...").format(size))
-
+    var reports = Dict[StringRef, benchmark.Report]()
     var dummy = stack_allocation[bench_size, type]()
 
     var res = softmax[bench_size](arr, dummy)
@@ -164,9 +163,7 @@ fn main() raises:
         benchmark.keep(bres)  # do not optimize out
 
     var r = benchmark.run[worker](max_runtime_secs=5)
-    py.print(py.str("Mean time (native): {}ms").format(r.mean("ms")))
-
-    var _r = softmax_simd_proper[bench_size, _simd_width](arr, dummy)
+    reports["softmax"] = r
 
     @always_inline
     @parameter
@@ -177,7 +174,7 @@ fn main() raises:
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd = benchmark.run[worker_simd_proper](max_runtime_secs=5)
-    py.print(py.str("Mean time (SIMD A): {}ms").format(r_simd.mean("ms")))
+    reports["softmax_simd_proper"] = r_simd
 
     if bench_size == 2048:
         var simd_arr = arr.load[width=bench_size](0)
@@ -190,4 +187,22 @@ fn main() raises:
             benchmark.keep(bres)  # do not optimize out
 
         var r_simd = benchmark.run[worker_simd](max_runtime_secs=5)
-        py.print(py.str("Mean time (SIMD B): {}ms").format(r_simd.mean("ms")))
+        reports["softmax_simd_raw"] = r_simd
+
+    return reports
+
+
+fn main() raises:
+    test()
+
+    var py = Python.import_module("builtins")
+    var reports = bench("softmax", 5)
+
+    for pair in reports.items():
+        var fn_name = pair[].key
+        var report = pair[].value
+        py.print(
+            py.str("Mean time for {} (ms): {}").format(
+                fn_name, report.mean("ms")
+            )
+        )
