@@ -7,7 +7,11 @@ import json
 
 def save_bench_results(bench_id, name, times, **kwargs):
     print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
-    fname = f"bench_times/{bench_id}/{name}_py.json"
+    suffix = "py"
+    if "pypy" in sys.version:
+        suffix = "pypy"
+
+    fname = f"bench_times/{bench_id}/{name}_{suffix}.json"
     to_save = {"mean": sum(times) / len(times), **kwargs, "times": times}
     with open(fname, "w") as f:
         json.dump(to_save, f)

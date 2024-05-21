@@ -29,6 +29,43 @@ fn quicksort(data: &mut Vec<Data>, left: isize, right: isize) {
     quicksort(data, i + 1, right);
 }
 
+fn save_results(times: &[f64], fname: &str) {
+    let mut times_diffed = vec![0f64; times.len() - 1];
+    for i in 1..times.len() {
+        times_diffed[i - 1] = times[i] - times[i - 1];
+    }
+    let times = times_diffed;
+
+    let filename = format!("{}_rs.json", fname);
+    let bench_id = std::env::args().nth(2).unwrap();
+    let path = std::path::Path::new(".")
+        .join("bench_times")
+        .join(bench_id)
+        .join(filename);
+
+    let mean = times.iter().sum::<f64>() / bench_size as f64;
+    let file_str = fname.to_string();
+    let times = times
+        .iter()
+        .map(|t| t.to_string())
+        .collect::<Vec<String>>()
+        .join(",");
+    let json = format!(
+        r#"{{
+            "mean": {},
+            "warmup_time": {},
+            "bench_time": {},
+            "file": "{}",
+            "times": [
+                {}
+            ]
+        }}"#,
+        mean, 0, 0, file_str, times
+    );
+
+    std::fs::write(path, json).unwrap();
+}
+
 fn main() {
     test();
     // arr is u8 1000000 of random elements allocated on heap
@@ -40,11 +77,14 @@ fn main() {
     quicksort(&mut cpy, 0, (bench_size - 1) as isize);
 
     let start = std::time::Instant::now();
-    let count = 1000;
-    for _ in 0..count {
+    #[allow(non_upper_case_globals)]
+    const count: usize = 1000;
+    let mut times = [0f64; count];
+    for i in 0..count {
         let mut cpy = arr.clone();
         quicksort(&mut cpy, 0, (bench_size - 1) as isize);
         let _keep = black_box(cpy);
+        times[i] = start.elapsed().as_nanos() as f64;
     }
     let elapsed = start.elapsed().as_nanos();
 
@@ -52,6 +92,8 @@ fn main() {
         "Mean time: {}ms",
         elapsed as f64 / 1000.0 / 1000.0 / count as f64
     );
+
+    save_results(&times, "quicksort");
 }
 
 fn test() {

@@ -70,7 +70,7 @@ def compile_mojo_benchmain(name):
 
 
 @shield_exceptions
-def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
+def bench_py(name, size, bench_id, warmup_time=3, bench_time=5):
     print(f"----- Running {name} - python")
     # copy file
     os.system(f"cp benches/{name}/{name}.py tmp/")
@@ -78,6 +78,15 @@ def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     os.system(
         f"python3 bench_suite.py tmp.{name} {bench_id} {warmup_time} {bench_time}"
     )
+
+
+@shield_exceptions
+def bench_pypy(name, size, bench_id, warmup_time=1, bench_time=5):
+    print(f"----- Running {name} - pypy")
+    # copy file
+    os.system(f"cp benches/{name}/{name}.py tmp/")
+    compile_size(name, size, "py")
+    os.system(f"pypy3 bench_suite.py tmp.{name} {bench_id} {warmup_time} {bench_time}")
 
 
 @shield_exceptions
@@ -90,12 +99,12 @@ def bench_mojo(name, size, bench_id, bench_time=5):
 
 
 @shield_exceptions
-def bench_rust(name, size):
+def bench_rust(name, size, bench_id, bench_time):
     print(f"----- Running {name} - rust")
     os.system(f"cp benches/{name}/{name}.rs tmp/")
     compile_size(name, size, "rs")
     os.system(
-        f"rustc tmp/{name}.rs -o tmp/{name}_rs -C opt-level=3 -C target-cpu=native -C lto -C codegen-units=1 -C panic=abort && tmp/{name}_rs {size} && rm tmp/{name}_rs"
+        f"rustc tmp/{name}.rs -o tmp/{name}_rs -C opt-level=3 -C target-cpu=native -C lto -C codegen-units=1 -C panic=abort && tmp/{name}_rs {size} {bench_id} && rm tmp/{name}_rs"
     )
 
 
@@ -107,29 +116,34 @@ size_defaults = {
 }
 
 
-def do_bench(name, size, bench_id):
+def do_bench(name, size, bench_id, bench_time=5):
     path = os.path.join("benches", name, name + ".py")
     if not os.path.exists(path):
         print("no bench named", name)
         return
 
     print(f"Benching {name} (size {size})")
-    bench_py(name, size, bench_id)
-    bench_mojo(name, size, bench_id)
-    bench_rust(name, size)
+    bench_py(name, size, bench_id, bench_time)
+    bench_pypy(name, size, bench_id, bench_time)
+    bench_mojo(name, size, bench_id, bench_time)
+    bench_rust(name, size, bench_id, bench_time)
 
     print(f"----- Done {name}")
 
 
 def main():
+    name = sys.argv[1] if len(sys.argv) > 1 else "all"
+    bench_id = sys.argv[2] if len(sys.argv) > 2 else None
+    bench_time = int(sys.argv[3]) if len(sys.argv) > 3 else 5
+
     # mkdir tmp
     if not os.path.exists("tmp"):
         os.mkdir("tmp")
 
-    if len(sys.argv) < 2:
+    if name == "all":
         # bench all
         print("Benching all")
-        bench_id = f"all_{str(int(time.time()))}"
+        bench_id = bench_id or f"all_{str(int(time.time()))}"
         # mkdir under bench_times
         os.mkdir(f"bench_times/{bench_id}")
 
@@ -137,16 +151,13 @@ def main():
             if name.startswith("."):
                 continue
 
-            do_bench(name, size_defaults[name], bench_id)
+            do_bench(name, size_defaults[name], bench_id, bench_time)
             print("\n--------------------\n")
 
         print("Done all!")
         return
 
-    name = sys.argv[1]
-    size = sys.argv[2] if len(sys.argv) > 2 else size_defaults[name]
-
-    do_bench(name, size, f"{name}_{size}")
+    do_bench(name, size_defaults[name], f"{name}_{size_defaults[name]}", bench_time)
 
     # cleanup tmp
     # os.system("rm -r tmp")
