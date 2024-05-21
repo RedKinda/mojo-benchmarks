@@ -8,6 +8,16 @@ import time
 from typing import Literal
 
 
+def shield_exceptions(func):
+    def inner(*args, **kwargs):
+        try:
+            func(*args, **kwargs)
+        except Exception as e:
+            print(e)
+
+    return inner
+
+
 def compile_size(
     name,
     size,
@@ -59,6 +69,7 @@ def compile_mojo_benchmain(name):
         f.writelines(newcontents)
 
 
+@shield_exceptions
 def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     print(f"----- Running {name} - python")
     # copy file
@@ -69,6 +80,7 @@ def bench_py(name, size, bench_id, warmup_time=1, bench_time=5):
     )
 
 
+@shield_exceptions
 def bench_mojo(name, size, bench_id, bench_time=5):
     print(f"----- Running {name} - mojo")
     os.system(f"cp benches/{name}/{name}.mojo tmp/")
@@ -77,6 +89,7 @@ def bench_mojo(name, size, bench_id, bench_time=5):
     os.system(f"mojo tmp/{name}.mojo {bench_id} {bench_time}")
 
 
+@shield_exceptions
 def bench_rust(name, size):
     print(f"----- Running {name} - rust")
     os.system(f"cp benches/{name}/{name}.rs tmp/")
