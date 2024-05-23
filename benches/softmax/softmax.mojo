@@ -162,7 +162,9 @@ fn bench(
         var bres = softmax[bench_size](arr, dummy)
         benchmark.keep(bres)  # do not optimize out
 
-    var r = benchmark.run[worker](max_runtime_secs=5)
+    var r = benchmark.run[worker](
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
+    )
     reports["softmax"] = r
 
     @always_inline
@@ -173,7 +175,9 @@ fn bench(
         )
         benchmark.keep(bres)  # do not optimize out
 
-    var r_simd = benchmark.run[worker_simd_proper](max_runtime_secs=5)
+    var r_simd = benchmark.run[worker_simd_proper](
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
+    )
     reports["softmax_simd_proper"] = r_simd
 
     if bench_size == 2048:
@@ -186,7 +190,9 @@ fn bench(
             var bres = softmax_simd[bench_size](simd_arr)
             benchmark.keep(bres)  # do not optimize out
 
-        var r_simd = benchmark.run[worker_simd](max_runtime_secs=5)
+        var r_simd = benchmark.run[worker_simd](
+            min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
+        )
         reports["softmax_simd_raw"] = r_simd
 
     return reports

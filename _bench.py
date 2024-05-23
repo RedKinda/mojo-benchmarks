@@ -122,11 +122,12 @@ def do_bench(name, size, bench_id, bench_time=5):
         print("no bench named", name)
         return
 
+    warmup_time = 3
     print(f"Benching {name} (size {size})")
-    bench_py(name, size, bench_id, bench_time)
-    bench_pypy(name, size, bench_id, bench_time)
-    bench_mojo(name, size, bench_id, bench_time)
-    bench_rust(name, size, bench_id, bench_time)
+    bench_py(name, size, bench_id, warmup_time, bench_time=bench_time)
+    bench_pypy(name, size, bench_id, warmup_time, bench_time=bench_time)
+    bench_mojo(name, size, bench_id, bench_time=bench_time)
+    bench_rust(name, size, bench_id, bench_time=bench_time)
 
     print(f"----- Done {name}")
 

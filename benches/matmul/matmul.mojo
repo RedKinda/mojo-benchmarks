@@ -182,7 +182,9 @@ fn bench(
         )
         benchmark.keep(bres)  # do not optimize out
 
-    var r = benchmark.run[worker](max_runtime_secs=5)
+    var r = benchmark.run[worker](
+        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+    )
     reports["matmul"] = r
 
     @always_inline
@@ -193,7 +195,9 @@ fn bench(
         )
         benchmark.keep(bres)  # do not optimize out
 
-    var r_simd = benchmark.run[worker_simd](max_runtime_secs=5)
+    var r_simd = benchmark.run[worker_simd](
+        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+    )
     reports["matmul_simd"] = r_simd
 
     @always_inline
@@ -202,7 +206,9 @@ fn bench(
         var bres = matmul_simd_raw[bench_size, bench_size](inp_a, inp_b, dummy)
         benchmark.keep(bres)  # do not optimize out
 
-    var r_simd_raw = benchmark.run[worker_simd_raw](max_runtime_secs=5)
+    var r_simd_raw = benchmark.run[worker_simd_raw](
+        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+    )
     reports["matmul_simd_raw"] = r_simd_raw
 
     @always_inline
@@ -214,7 +220,7 @@ fn bench(
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd_parallel = benchmark.run[worker_simd_parallel](
-        max_runtime_secs=5
+        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
     )
     reports["matmul_simd_parallel"] = r_simd_parallel
 

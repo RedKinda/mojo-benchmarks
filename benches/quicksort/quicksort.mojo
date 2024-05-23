@@ -65,7 +65,7 @@ fn bench(
         quicksort(temp, 0, bench_size - 1)
 
     var r = benchmark.run[worker](
-        min_runtime_secs=bench_time, max_runtime_secs=bench_time
+        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
     )
 
     var res = Dict[StringRef, benchmark.Report]()

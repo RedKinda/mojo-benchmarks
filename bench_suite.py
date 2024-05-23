@@ -8,7 +8,7 @@ import json
 def save_bench_results(bench_id, name, times, **kwargs):
     print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
     suffix = "py"
-    if "pypy" in sys.version:
+    if "pypy" in sys.version.lower():
         suffix = "pypy"
 
     fname = f"bench_times/{bench_id}/{name}_{suffix}.json"
@@ -65,6 +65,8 @@ def bench(
             start = time.time()
             while time.time() - start < warmup_time:
                 f(input_param)
+
+            signal.alarm(0)  # disable the alarm
 
         try:
             warmup()
