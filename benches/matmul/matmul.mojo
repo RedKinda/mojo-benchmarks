@@ -159,6 +159,13 @@ fn test() raises:
         raise "Test failed (SIMD+Parallel)"
 
 
+fn get_uniform_random() -> Float64:
+    # first get random between 0 and 1
+    var r = stack_allocation[1, Float64]()
+    rand[DType.float64](r, 1)
+    return r[0] / Float64.MAX_FINITE
+
+
 fn bench(
     bench_id: StringRef, bench_time: Int = 5
 ) raises -> Dict[StringRef, benchmark.Report]:
@@ -167,8 +174,10 @@ fn bench(
     var inp_a = DTypePointer[type].alloc(bench_size * bench_size)
     var inp_b = DTypePointer[type].alloc(bench_size * bench_size)
     # seed(1)
-    rand(inp_a, bench_size * bench_size)
-    rand(inp_b, bench_size * bench_size)
+    # randomize the inputs
+    for i in range(bench_size * bench_size):
+        inp_a[i] = get_uniform_random()
+        inp_b[i] = get_uniform_random()
 
     var reports = Dict[StringRef, benchmark.Report]()
 
@@ -183,7 +192,7 @@ fn bench(
         benchmark.keep(bres)  # do not optimize out
 
     var r = benchmark.run[worker](
-        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
     )
     reports["matmul"] = r
 
@@ -196,7 +205,7 @@ fn bench(
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd = benchmark.run[worker_simd](
-        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
     )
     reports["matmul_simd"] = r_simd
 
@@ -207,7 +216,7 @@ fn bench(
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd_raw = benchmark.run[worker_simd_raw](
-        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
     )
     reports["matmul_simd_raw"] = r_simd_raw
 
@@ -220,7 +229,7 @@ fn bench(
         benchmark.keep(bres)  # do not optimize out
 
     var r_simd_parallel = benchmark.run[worker_simd_parallel](
-        min_runtime_secs=bench_time*0.75, max_runtime_secs=bench_time
+        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
     )
     reports["matmul_simd_parallel"] = r_simd_parallel
 

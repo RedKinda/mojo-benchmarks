@@ -12,7 +12,7 @@ from pathlib import Path
 fn save_report(
     bench_id: StringRef, fn_name: StringRef, report: benchmark.Report
 ) raises:
-    var fname = String("").join(fn_name, "_mojo.json")
+    var fname = String("").join(fn_name, "_", str(bench_size), "_mojo.json")
     var path = Path(".") / "bench_times" / bench_id / fname
     print(fname, end=" - ")
     print(report.mean("ms"))
@@ -22,6 +22,7 @@ fn save_report(
     json += '"warmup_time": ' + str(report.warmup_duration) + ","
     json += '"bench_time": ' + str(report.duration("s")) + ","
     json += '"file": "' + str(fn_name) + '",'
+    json += '"size": ' + str(bench_size) + ","
     # add times in nanoseconds
     json += '"times": ['
     for batch in report.runs:

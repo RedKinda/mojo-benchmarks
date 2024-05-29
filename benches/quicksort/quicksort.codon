@@ -1,0 +1,56 @@
+import random
+import sys
+import time
+
+
+bench_size = 10000
+
+
+def quicksort(data, left, right):
+    if left >= right:
+        return
+
+    pivot = data[right]
+    i = left - 1
+
+    for j in range(left, right):
+        if data[j] <= pivot:
+            i = i + 1
+            (data[i], data[j]) = (data[j], data[i])
+
+    (data[i + 1], data[right]) = (data[right], data[i + 1])
+
+    i += 1
+
+    quicksort(data, left, i - 1)
+    quicksort(data, i + 1, right)
+
+
+def bench_quicksort(data):
+    # copy
+    test_data = data.copy()
+    quicksort(test_data, 0, len(test_data) - 1)
+
+
+def test():
+    data = [3, 6, 8, 10, 1, 2, 1]
+    quicksort(data, 0, len(data) - 1)
+    assert data == [1, 1, 2, 3, 6, 8, 10]
+
+    # also test 4 3 2 1
+    data = [4, 3, 2, 1]
+    quicksort(data, 0, len(data) - 1)
+    assert data == [1, 2, 3, 4]
+
+
+def initialize():
+    arr = []
+    for i in range(bench_size):
+        arr.append(random.randint(0, 256))
+    return arr
+
+
+def bench(bench_time):
+    arr = initialize()
+    times = do_bench(bench_time, bench_quicksort, arr)
+    return {"quicksort": times}

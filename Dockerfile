@@ -28,6 +28,12 @@ RUN curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y
 ENV PATH="/root/.cargo/bin:${PATH}"
 RUN rustup default nightly
 
+# install codon
+RUN apt install -y libpython3-dev
+RUN /bin/bash -c "$(curl -fsSL https://exaloop.io/install.sh)" || echo "Failed to finish installing, ignoring error"
+ENV PATH="/root/.codon/bin:${PATH}"
+ENV CODON_PYTHON=/usr/local/lib/libpython3.so
+
 # install numpy
 RUN python3 -m pip install numpy --upgrade --break-system-packages && pypy3 -m pip install numpy --upgrade --user --break-system-packages
 # ENV PYTHONPATH /usr/local/lib/python3.9:/usr/local/lib/python3.9/site-packages
@@ -39,5 +45,5 @@ RUN mkdir bench_times && mkdir tmp
 # copy everything
 COPY . /app
 
-ENTRYPOINT [ "python3", "_bench.py" ]
+CMD [ "python3", "_bench.py" ]
 

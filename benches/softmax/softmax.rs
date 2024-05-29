@@ -58,9 +58,12 @@ fn save_results(times: &[f64], fname: &str) {
     }
     let times = times_diffed;
 
-    let filename = format!("{}_rs.json", fname);
+    let filename = format!("{}_{}_rs.json", fname, bench_size);
     let bench_id = std::env::args().nth(2).unwrap();
-    let path = std::path::Path::new(".").join("bench_times").join(bench_id).join(filename);
+    let path = std::path::Path::new(".")
+        .join("bench_times")
+        .join(bench_id)
+        .join(filename);
 
     let mean = times.iter().sum::<f64>() / bench_size as f64;
     let file_str = fname.to_string();
@@ -75,11 +78,12 @@ fn save_results(times: &[f64], fname: &str) {
             "warmup_time": {},
             "bench_time": {},
             "file": "{}",
+            "bench_size": {},
             "times": [
                 {}
             ]
         }}"#,
-        mean, 0, 0, file_str, times
+        mean, 0, 0, file_str, bench_size, times
     );
 
     std::fs::write(path, json).unwrap();

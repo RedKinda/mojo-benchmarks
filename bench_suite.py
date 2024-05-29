@@ -5,14 +5,19 @@ import time
 import json
 
 
-def save_bench_results(bench_id, name, times, **kwargs):
+def save_bench_results(bench_id, name, bench_size, times, **kwargs):
     print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
     suffix = "py"
     if "pypy" in sys.version.lower():
         suffix = "pypy"
 
-    fname = f"bench_times/{bench_id}/{name}_{suffix}.json"
-    to_save = {"mean": sum(times) / len(times), **kwargs, "times": times}
+    fname = f"bench_times/{bench_id}/{name}_{bench_size}_{suffix}.json"
+    to_save = {
+        "mean": sum(times) / len(times),
+        "bench_size": bench_size,
+        **kwargs,
+        "times": times,
+    }
     with open(fname, "w") as f:
         json.dump(to_save, f)
 
@@ -81,9 +86,12 @@ def bench(
             times.append(time.perf_counter_ns())
 
         diffs = [times[i] - times[i - 1] for i in range(1, len(times))]
+
+        bench_size = getattr(b, "bench_size")
         save_bench_results(
             bench_id,
             fname.removeprefix("bench_"),
+            bench_size,
             diffs,
             warmup_time=warmup_time,
             bench_time=bench_time,

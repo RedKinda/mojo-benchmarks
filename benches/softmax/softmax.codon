@@ -1,0 +1,27 @@
+import math
+import random
+import sys
+import time
+
+bench_size = 10000
+
+
+def bench_softmax_native(x: list[float]) -> list[float]:
+    maxes = max(x)
+    x_exp = [math.exp(xi - maxes) for xi in x]
+    x_exp_sum = sum(x_exp)
+    probs = [xi / x_exp_sum for xi in x_exp]
+    return probs
+
+
+def initialize():
+    arr = []
+    for i in range(bench_size):
+        arr.append(random.uniform(0, 1))
+    return arr
+
+
+def bench(bench_time):
+    arr = initialize()
+    times = do_bench(bench_time, bench_softmax_native, arr)
+    return {"softmax": times}

@@ -1,0 +1,59 @@
+import os
+import sys
+from python import time
+from python import json
+
+
+def __codon_save_results(
+    bench_id, name, bench_size, warmup_time, bench_time, file, times
+):
+    pass
+    print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
+    suffix = "codon"
+
+    fname = f"bench_times/{bench_id}/{name}_{bench_size}_{suffix}.json"
+    to_save = {
+        "_time": times[0],
+        "mean": sum(times) / len(times),
+        "bench_size": bench_size,
+        "warmup_time": warmup_time,
+        "bench_time": bench_time,
+        "file": file,
+        "times": times,
+    }
+    with open(fname, "w") as f:
+        f.write(json.dumps(to_save))
+
+
+def do_bench(bench_time, f, inp):
+    bench_time_ns = bench_time * 1000 * 1000 * 1000
+    start = time.perf_counter_ns()
+    times = [start]
+    while time.perf_counter_ns() - start < bench_time_ns:
+        f(inp)
+        times.append(time.perf_counter_ns())
+
+    diffs = [times[i] - times[i - 1] for i in range(1, len(times))]
+    return diffs
+
+
+# %BENCH_BODY%
+
+if __name__ == "__main__":
+    file_location = sys.argv[1] if len(sys.argv) > 1 else "tmp.crc16"
+    bench_id = sys.argv[2] if len(sys.argv) > 2 else str(int(time.time()))
+    warmup_time = int(sys.argv[3]) if len(sys.argv) > 3 else 1
+    bench_time = int(sys.argv[4]) if len(sys.argv) > 4 else 5
+
+    # mkdir
+    # if not os.path.exists(f"bench_times/{bench_id}"):
+    #     os.mkdir(f"bench_times/{bench_id}")
+
+    results = bench(
+        bench_time=bench_time,
+    )
+
+    for name, times in results.items():
+        __codon_save_results(
+            bench_id, name, bench_size, warmup_time, bench_time, file_location, times
+        )

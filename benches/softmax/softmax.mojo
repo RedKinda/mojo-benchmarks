@@ -180,7 +180,7 @@ fn bench(
     )
     reports["softmax_simd_proper"] = r_simd
 
-    if bench_size == 2048:
+    if math.log2[DType.float64, 1](bench_size) % 1 == 0:
         var simd_arr = arr.load[width=bench_size](0)
         var _r = softmax_simd[bench_size](simd_arr)
 

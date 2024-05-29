@@ -1,0 +1,35 @@
+import math
+import sys
+import time
+import random
+
+bench_size = 128
+
+
+def bench_matmul_native(pair):
+
+    a, b = pair
+    m, n = len(a), len(a[0])
+    p = len(b[0])
+
+    # init c
+    c = [[0.0 for _ in range(p)] for _ in range(m)]
+
+    for i in range(m):
+        for j in range(p):
+            for k in range(n):
+                c[i][j] += a[i][k] * b[k][j]
+
+    return c
+
+
+def initialize():
+    a = [[random.uniform(0, 1) for _ in range(bench_size)] for _ in range(bench_size)]
+    b = [[random.uniform(0, 1) for _ in range(bench_size)] for _ in range(bench_size)]
+    return (a, b)
+
+
+def bench(bench_time):
+    pair = initialize()
+    times_native = do_bench(bench_time, bench_matmul_native, pair)
+    return {"matmul_native": times_native}

@@ -69,6 +69,20 @@ def compile_mojo_benchmain(name):
         f.writelines(newcontents)
 
 
+def compile_codon_benchmain(name):
+    # we format contents of bench_suite.codon at line with # %BENCH_BODY% with contents of the benchmark
+    with open("bench_suite.codon", "r") as f:
+        bench_suite = f.read()
+
+    with open(f"tmp/{name}.codon", "r") as f:
+        bench_contents = f.read()
+
+    bench_suite = bench_suite.replace("# %BENCH_BODY%", bench_contents)
+
+    with open(f"tmp/{name}.codon", "w") as f:
+        f.write(bench_suite)
+
+
 @shield_exceptions
 def bench_py(name, size, bench_id, warmup_time=3, bench_time=5):
     print(f"----- Running {name} - python")
@@ -87,6 +101,17 @@ def bench_pypy(name, size, bench_id, warmup_time=1, bench_time=5):
     os.system(f"cp benches/{name}/{name}.py tmp/")
     compile_size(name, size, "py")
     os.system(f"pypy3 bench_suite.py tmp.{name} {bench_id} {warmup_time} {bench_time}")
+
+
+@shield_exceptions
+def bench_codon(name, size, bench_id, warmup_time=1, bench_time=5):
+    print(f"----- Running {name} - codon")
+    # copy file
+    os.system(f"cp benches/{name}/{name}.codon tmp/")
+    compile_codon_benchmain(name)
+    os.system(
+        f"codon run tmp/{name}.codon tmp.{name} {bench_id} {warmup_time} {bench_time}"
+    )
 
 
 @shield_exceptions
@@ -115,6 +140,13 @@ size_defaults = {
     "matmul": 256,
 }
 
+size_scales = {
+    "crc16": [1000, 10000, 100000, 1000000],
+    "quicksort": [1000, 10000, 100000],
+    "softmax": [128, 512, 2048, 8192, 16384],
+    "matmul": [64, 128, 256, 512],
+}
+
 
 def do_bench(name, size, bench_id, bench_time=5):
     path = os.path.join("benches", name, name + ".py")
@@ -126,6 +158,7 @@ def do_bench(name, size, bench_id, bench_time=5):
     print(f"Benching {name} (size {size})")
     bench_py(name, size, bench_id, warmup_time, bench_time=bench_time)
     bench_pypy(name, size, bench_id, warmup_time, bench_time=bench_time)
+    bench_codon(name, size, bench_id, warmup_time, bench_time=bench_time)
     bench_mojo(name, size, bench_id, bench_time=bench_time)
     bench_rust(name, size, bench_id, bench_time=bench_time)
 
@@ -133,7 +166,7 @@ def do_bench(name, size, bench_id, bench_time=5):
 
 
 def main():
-    name = sys.argv[1] if len(sys.argv) > 1 else "all"
+    to_bench = sys.argv[1] if len(sys.argv) > 1 else "all"
     bench_id = sys.argv[2] if len(sys.argv) > 2 else None
     bench_time = int(sys.argv[3]) if len(sys.argv) > 3 else 5
 
@@ -141,10 +174,10 @@ def main():
     if not os.path.exists("tmp"):
         os.mkdir("tmp")
 
-    if name == "all":
+    if to_bench in ("all", "full"):
         # bench all
-        print("Benching all")
-        bench_id = bench_id or f"all_{str(int(time.time()))}"
+        print(f"Benching {to_bench}")
+        bench_id = bench_id or f"{to_bench}_{str(int(time.time()))}"
         # mkdir under bench_times
         os.mkdir(f"bench_times/{bench_id}")
 
@@ -152,13 +185,24 @@ def main():
             if name.startswith("."):
                 continue
 
-            do_bench(name, size_defaults[name], bench_id, bench_time)
+            sizes = [size_defaults[name]]
+            if to_bench == "full":
+                sizes = size_scales[name]
+
+            for size in sizes:
+                do_bench(name, size, bench_id, bench_time)
+
             print("\n--------------------\n")
 
         print("Done all!")
         return
 
-    do_bench(name, size_defaults[name], f"{name}_{size_defaults[name]}", bench_time)
+    do_bench(
+        to_bench,
+        size_defaults[to_bench],
+        f"{to_bench}_{size_defaults[to_bench]}",
+        bench_time,
+    )
 
     # cleanup tmp
     # os.system("rm -r tmp")
