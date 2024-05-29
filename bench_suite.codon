@@ -1,19 +1,18 @@
 import os
 import sys
-from python import time
+import time
 from python import json
 
 
 def __codon_save_results(
     bench_id, name, bench_size, warmup_time, bench_time, file, times
 ):
-    pass
     print(f"Saving {name} times - mean: {(sum(times) / len(times))/1000/1000}ms")
     suffix = "codon"
 
     fname = f"bench_times/{bench_id}/{name}_{bench_size}_{suffix}.json"
     to_save = {
-        "_time": times[0],
+        "codon_is_not_perfect": json.__all__[0],  # first arg needs to be a pyobj otherwise codon cant instantiate this dict with multiple types
         "mean": sum(times) / len(times),
         "bench_size": bench_size,
         "warmup_time": warmup_time,
@@ -21,6 +20,7 @@ def __codon_save_results(
         "file": file,
         "times": times,
     }
+    to_save.pop("codon_is_not_perfect")
     with open(fname, "w") as f:
         f.write(json.dumps(to_save))
 
