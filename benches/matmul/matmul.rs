@@ -2,31 +2,22 @@ use std::fs::File;
 use std::hint::black_box;
 use std::io::Read;
 
-type Data = u8;
 #[allow(non_upper_case_globals)]
-const bench_size: usize = 1000000;
+const bench_size: usize = 128;
 
-fn quicksort(data: &mut Vec<Data>, left: isize, right: isize) {
-    if left >= right {
-        return;
-    }
+fn matmul<const M: usize, const N: usize, const P: usize>(
+    pair: (&[f64], &[f64]),
+    result: &mut [f64],
+) {
+    let (a, b) = pair;
 
-    let pivot = data[right as usize];
-    let mut i = left - 1;
-
-    for j in left..right {
-        if data[j as usize] <= pivot {
-            i += 1;
-            data.swap(i as usize, j as usize);
+    for i in 0..M {
+        for j in 0..P {
+            for k in 0..N {
+                result[i * P + j] += a[i * P + k] * b[k * P + j];
+            }
         }
     }
-
-    data.swap((i + 1) as usize, right as usize);
-
-    i += 1;
-
-    quicksort(data, left, i - 1);
-    quicksort(data, i + 1, right);
 }
 
 fn save_results(times: &[f64], fname: &str) {
@@ -68,25 +59,53 @@ fn save_results(times: &[f64], fname: &str) {
 }
 
 fn main() {
+    test();
     let bench_time = std::env::args().nth(3).unwrap().parse::<usize>().unwrap();
     let bench_time_ns: f64 = bench_time as f64 * 1_000_000_000f64;
     test();
     // arr is u8 1000000 of random elements allocated on heap
-    let mut arr: Vec<Data> = vec![0u8; bench_size as usize];
+    let mut arr = [0f64; bench_size * bench_size];
+    let mut arr2 = [0f64; bench_size * bench_size];
     let mut f = File::open("/dev/urandom").unwrap();
-    f.read_exact(arr.as_mut()).unwrap();
+    let mut buf = [0u8; bench_size * bench_size * 8];
+    let mut buf2 = [0u8; bench_size * bench_size * 8];
+    f.read_exact(&mut buf).unwrap();
+    f.read_exact(&mut buf2).unwrap();
 
-    let mut cpy = arr.clone();
-    quicksort(&mut cpy, 0, (bench_size - 1) as isize);
+    // uniform random u8 -> f64
+    for i in buf.chunks_exact(8) {
+        let mut num = 0u64;
+        for j in 0..8 {
+            num |= (i[j] as u64) << (j * 8);
+        }
+        let num = num as f64 / f64::MAX;
+        arr[i.len() / 8] = num;
+    }
 
+    for i in buf2.chunks_exact(8) {
+        let mut num = 0u64;
+        for j in 0..8 {
+            num |= (i[j] as u64) << (j * 8);
+        }
+        let num = num as f64 / f64::MAX;
+        arr2[i.len() / 8] = num;
+    }
+
+    // println!("starting..");
+
+    // benchmark this 1000 times, get mean
     let start = std::time::Instant::now();
     let mut times = vec![];
 
     loop {
-        let mut local_copy = arr.clone();
-        black_box(quicksort(&mut local_copy, 0, (bench_size - 1) as isize));
+        let mut res = [0f64; bench_size * bench_size];
+        black_box(matmul::<bench_size, bench_size, bench_size>(
+            (&arr, &arr2),
+            &mut res,
+        ));
         let time = start.elapsed().as_nanos() as f64;
         if time > bench_time_ns {
+            times.push(time);
             break;
         }
         times.push(time);
@@ -95,14 +114,19 @@ fn main() {
 
     println!(
         "Mean time: {}ms",
-        elapsed as f64 / times.len() as f64 * 1_000_000f64
+        elapsed as f64 / 1000.0 / 1000.0 / times.len() as f64
     );
 
-    save_results(&times, "quicksort");
+    save_results(&times, "crc16");
 }
 
 fn test() {
-    let mut arr = vec![4, 3, 2, 1];
-    quicksort(&mut arr, 0, 3);
-    assert_eq!(arr, vec![1, 2, 3, 4]);
+    let x = [1.0, 2.0, 3.0, 4.0];
+    let y = [5.0, 6.0, 7.0, 8.0];
+
+    let mut res = [0.0; 4];
+
+    matmul::<2, 2, 2>((&x, &y), &mut res);
+
+    assert_eq!(res, [19.0, 22.0, 43.0, 50.0]);
 }

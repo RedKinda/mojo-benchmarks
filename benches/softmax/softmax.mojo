@@ -180,7 +180,8 @@ fn bench(
     )
     reports["softmax_simd_proper"] = r_simd
 
-    if math.log2[DType.float64, 1](bench_size) % 1 == 0:
+    # dirty SIMD benchmark - only do sizes of power two and less than some constant where it seems to crash
+    if math.log2[DType.float64, 1](bench_size) % 1 == 0 and bench_size < 16384:
         var simd_arr = arr.load[width=bench_size](0)
         var _r = softmax_simd[bench_size](simd_arr)
 

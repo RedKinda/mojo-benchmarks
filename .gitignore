@@ -5,4 +5,4 @@ src/
 **/__pycache__
 tmp/
 bench_times/
-results/
+results/data/

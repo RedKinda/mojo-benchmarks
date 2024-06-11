@@ -1,6 +1,6 @@
 import random
 
-bench_size = 100000
+bench_size = 1000
 
 
 def bench_crc16(data, poly=0x8408):

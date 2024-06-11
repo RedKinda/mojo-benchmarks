@@ -90,6 +90,8 @@ fn save_results(times: &[f64], fname: &str) {
 }
 
 fn main() {
+    let bench_time = std::env::args().nth(3).unwrap().parse::<usize>().unwrap();
+    let bench_time_ns: f64 = bench_time as f64 * 1_000_000_000f64;
     test();
     let mut random_arr = [0u8; bench_size * 8];
     let mut f = File::open("/dev/urandom").unwrap();
@@ -116,18 +118,22 @@ fn main() {
 
     // benchmark this 1000 times, get mean
     let start = std::time::Instant::now();
-    #[allow(non_upper_case_globals)]
-    const count: usize = 1000;
-    let mut times = [0f64; count];
-    for i in 0..count {
+    let mut times = vec![];
+
+    loop {
         black_box(softmax(&arr));
-        times[i] = start.elapsed().as_nanos() as f64;
+        let time = start.elapsed().as_nanos() as f64;
+        if time > bench_time_ns {
+            times.push(time);
+            break;
+        }
+        times.push(time);
     }
     let elapsed = start.elapsed().as_nanos();
 
     println!(
-        "Mean time (native): {}ms",
-        elapsed as f64 / 1000.0 / 1000.0 / count as f64
+        "Mean time: {}ms",
+        elapsed as f64 / times.len() as f64 * 1_000_000f64
     );
 
     // prepare array of simd vectors
@@ -143,16 +149,22 @@ fn main() {
 
     // benchmark this 1000 times, get mean
     let start = std::time::Instant::now();
-    let mut times_simd = [0f64; count];
-    for i in 0..count {
-        black_box(softmax_simd(&simd_arr));
-        times_simd[i] = start.elapsed().as_nanos() as f64;
+    let mut times_simd = vec![];
+
+    loop {
+        black_box(softmax_simd(&arr));
+        let time = start.elapsed().as_nanos() as f64;
+        if time > bench_time_ns {
+            times_simd.push(time);
+            break;
+        }
+        times_simd.push(time);
     }
     let elapsed = start.elapsed().as_nanos();
 
     println!(
-        "Mean time   (SIMD): {}ms",
-        elapsed as f64 / 1000.0 / 1000.0 / count as f64
+        "Mean time: {}ms",
+        elapsed as f64 / times.len() as f64 * 1_000_000f64
     );
 
     save_results(&times, "softmax_native");

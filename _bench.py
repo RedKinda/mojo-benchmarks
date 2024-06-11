@@ -21,14 +21,14 @@ def shield_exceptions(func):
 def compile_size(
     name,
     size,
-    format: Literal["mojo", "py", "rs"],
+    format: Literal["mojo", "py", "codon", "rs"],
 ):
     to_match = "bench_size = "
     if format == "rs":
         to_match = "bench_size: usize = "
 
     # open file under /tmp, find line that has `size = ` in it and replace the value with the new size
-    with open(f"benches/{name}/{name}.{format}", "r") as f:
+    with open(f"tmp/{name}.{format}", "r") as f:
         lines = f.readlines()
         for i, line in enumerate(lines):
             if to_match in line and not line[0].isspace():
@@ -69,7 +69,10 @@ def compile_mojo_benchmain(name):
         f.writelines(newcontents)
 
 
-def compile_codon_benchmain(name):
+def compile_codon_benchmain(name, size):
+    # first compile size
+    compile_size(name, size, "codon")
+
     # we format contents of bench_suite.codon at line with # %BENCH_BODY% with contents of the benchmark
     with open("bench_suite.codon", "r") as f:
         bench_suite = f.read()
@@ -108,7 +111,7 @@ def bench_codon(name, size, bench_id, warmup_time=1, bench_time=5):
     print(f"----- Running {name} - codon")
     # copy file
     os.system(f"cp benches/{name}/{name}.codon tmp/")
-    compile_codon_benchmain(name)
+    compile_codon_benchmain(name, size)
     os.system(
         f"codon run tmp/{name}.codon tmp.{name} {bench_id} {warmup_time} {bench_time}"
     )
@@ -129,7 +132,7 @@ def bench_rust(name, size, bench_id, bench_time):
     os.system(f"cp benches/{name}/{name}.rs tmp/")
     compile_size(name, size, "rs")
     os.system(
-        f"rustc tmp/{name}.rs -o tmp/{name}_rs -C opt-level=3 -C target-cpu=native -C lto -C codegen-units=1 -C panic=abort && tmp/{name}_rs {size} {bench_id} && rm tmp/{name}_rs"
+        f"rustc tmp/{name}.rs -o tmp/{name}_rs -C opt-level=3 -C target-cpu=native -C lto -C codegen-units=1 -C panic=abort && tmp/{name}_rs {size} {bench_id} {bench_time} && rm tmp/{name}_rs"
     )
 
 

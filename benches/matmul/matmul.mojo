@@ -6,7 +6,7 @@ import math
 from algorithm import vectorize, parallelize
 
 alias type = DType.float64
-alias bench_size = 128
+alias bench_size = 1024
 alias _simd_width = 16
 
 
@@ -15,9 +15,7 @@ fn matmul[
     size_ay: Int,
     # size_bx: Int, - not needed, same as size_ay
     size_by: Int,
-](
-    a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]
-) -> DTypePointer[type]:
+](a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]):
     for i in range(size_ax):
         for j in range(size_by):
             var sum = 0.0
@@ -26,8 +24,6 @@ fn matmul[
 
             res_ptr[i * size_by + j] = sum
 
-    return res_ptr
-
 
 fn matmul_simd[
     simd_width: Int,
@@ -35,9 +31,7 @@ fn matmul_simd[
     size_ay: Int,
     # size_bx: Int, - not needed, same as size_ay
     size_by: Int,
-](
-    a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]
-) -> DTypePointer[type]:
+](a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]):
     for i in range(size_ax):
         for j in range(size_by):
 
@@ -52,17 +46,13 @@ fn matmul_simd[
 
             vectorize[do_sum, simd_width, size=size_by]()
 
-    return res_ptr
-
 
 fn matmul_simd_raw[
     size_ax: Int,
     # size_ay: Int, - for raw we need to assume the same size for both ax and ay
     # size_bx: Int, - not needed, same as size_ax
     size_by: Int,
-](
-    a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]
-) -> DTypePointer[type]:
+](a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]):
     for i in range(size_ax):
         for j in range(size_by):
             res_ptr.store[width=size_ax](
@@ -71,8 +61,6 @@ fn matmul_simd_raw[
                 + a[i * size_ax + j] * b.load[width=size_ax](j * size_ax),
             )
 
-    return res_ptr
-
 
 fn matmul_simd_parallel[
     simd_width: Int,
@@ -80,9 +68,7 @@ fn matmul_simd_parallel[
     size_ay: Int,
     # size_bx: Int, - not needed, same as size_ay
     size_by: Int,
-](
-    a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]
-) -> DTypePointer[type]:
+](a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]):
     @parameter
     fn row(i: Int):
         for j in range(size_by):
@@ -102,8 +88,6 @@ fn matmul_simd_parallel[
         size_ax, size_ax
     )  # instead of a forloop over size_ax we parallelize
 
-    return res_ptr
-
 
 fn test() raises:
     var x = stack_allocation[4, type]()
@@ -112,6 +96,13 @@ fn test() raises:
     var res_simd = stack_allocation[4, type]()
     var res_simd_raw = stack_allocation[4, type]()
     var res_simd_parallel = stack_allocation[4, type]()
+
+    # zero out all results
+    for i in range(4):
+        res[i] = 0
+        res_simd[i] = 0
+        res_simd_raw[i] = 0
+        res_simd_parallel[i] = 0
 
     x[0] = 1
     x[1] = 2
@@ -132,6 +123,7 @@ fn test() raises:
 
     # assert its [[19, 22], [43, 50]]
     if res[0] != 19 or res[1] != 22 or res[2] != 43 or res[3] != 50:
+        print(res[0], res[1], res[2], res[3])
         raise "Test failed (native)"
 
     if (
@@ -140,6 +132,7 @@ fn test() raises:
         or res_simd[2] != 43
         or res_simd[3] != 50
     ):
+        print(res_simd[0], res_simd[1], res_simd[2], res_simd[3])
         raise "Test failed (SIMD)"
 
     if (
@@ -148,6 +141,9 @@ fn test() raises:
         or res_simd_raw[2] != 43
         or res_simd_raw[3] != 50
     ):
+        print(
+            res_simd_raw[0], res_simd_raw[1], res_simd_raw[2], res_simd_raw[3]
+        )
         raise "Test failed (raw SIMD)"
 
     if (
@@ -156,14 +152,15 @@ fn test() raises:
         or res_simd_parallel[2] != 43
         or res_simd_parallel[3] != 50
     ):
+        print(
+            res_simd_parallel[0],
+            res_simd_parallel[1],
+            res_simd_parallel[2],
+            res_simd_parallel[3],
+        )
         raise "Test failed (SIMD+Parallel)"
 
 
-fn get_uniform_random() -> Float64:
-    # first get random between 0 and 1
-    var r = stack_allocation[1, Float64]()
-    rand[DType.float64](r, 1)
-    return r[0] / Float64.MAX_FINITE
 
 
 fn bench(
@@ -176,8 +173,8 @@ fn bench(
     # seed(1)
     # randomize the inputs
     for i in range(bench_size * bench_size):
-        inp_a[i] = get_uniform_random()
-        inp_b[i] = get_uniform_random()
+        inp_a[i] = random.random_float64()
+        inp_b[i] = random.random_float64()
 
     var reports = Dict[StringRef, benchmark.Report]()
 

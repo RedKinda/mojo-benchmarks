@@ -65,6 +65,8 @@ fn save_results(times: &[f64], fname: &str) {
 }
 
 fn main() {
+    let bench_time = std::env::args().nth(3).unwrap().parse::<usize>().unwrap();
+    let bench_time_ns: f64 = bench_time as f64 * 1_000_000_000f64;
     test();
     // arr is u8 1000000 of random elements allocated on heap
     let mut arr = vec![0u8; bench_size];
@@ -75,20 +77,23 @@ fn main() {
 
     // println!("starting..");
 
-    // benchmark this 1000 times, get mean
     let start = std::time::Instant::now();
-    #[allow(non_upper_case_globals)]
-    const count: usize = 1000;
-    let mut times = [0f64; count];
-    for i in 0..count {
+    let mut times = vec![];
+
+    loop {
         black_box(crc16(&arr));
-        times[i] = start.elapsed().as_nanos() as f64;
+        let time = start.elapsed().as_nanos() as f64;
+        if time > bench_time_ns {
+            times.push(time);
+            break;
+        }
+        times.push(time);
     }
     let elapsed = start.elapsed().as_nanos();
 
     println!(
         "Mean time: {}ms",
-        elapsed as f64 / 1000.0 / 1000.0 / count as f64
+        elapsed as f64 / times.len() as f64 * 1_000_000f64
     );
 
     save_results(&times, "crc16");
