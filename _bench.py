@@ -137,17 +137,17 @@ def bench_rust(name, size, bench_id, bench_time):
 
 
 size_defaults = {
-    "crc16": 100000,
-    "quicksort": 10000,
-    "softmax": 2048,
-    "matmul": 256,
+    "crc16": [100000],
+    "quicksort": [10000],
+    "softmax": [2048],
+    "matmul": [256],
 }
 
 size_scales = {
     "crc16": [1000, 10000, 100000, 1000000],
     "quicksort": [1000, 10000, 100000],
     "softmax": [128, 512, 2048, 8192, 16384],
-    "matmul": [64, 128, 256, 512],
+    "matmul": [64, 128, 256, 512, 1024, 2048],
 }
 
 
@@ -177,6 +177,14 @@ def main():
     if not os.path.exists("tmp"):
         os.mkdir("tmp")
 
+    sizes_dict = size_defaults
+    if to_bench == "full":
+        sizes_dict = size_scales
+
+    if to_bench.startswith("full_"):
+        to_bench = to_bench[5:]
+        sizes_dict = size_scales
+
     if to_bench in ("all", "full"):
         # bench all
         print(f"Benching {to_bench}")
@@ -188,9 +196,7 @@ def main():
             if name.startswith("."):
                 continue
 
-            sizes = [size_defaults[name]]
-            if to_bench == "full":
-                sizes = size_scales[name]
+            sizes = sizes_dict[name]
 
             for size in sizes:
                 do_bench(name, size, bench_id, bench_time)
@@ -200,12 +206,13 @@ def main():
         print("Done all!")
         return
 
-    do_bench(
-        to_bench,
-        size_defaults[to_bench],
-        f"{to_bench}_{size_defaults[to_bench]}",
-        bench_time,
-    )
+    for size in sizes_dict[to_bench]:
+        do_bench(
+            to_bench,
+            size,
+            f"{to_bench}_{size}",
+            bench_time,
+        )
 
     # cleanup tmp
     # os.system("rm -r tmp")

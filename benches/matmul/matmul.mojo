@@ -6,8 +6,11 @@ import math
 from algorithm import vectorize, parallelize
 
 alias type = DType.float64
-alias bench_size = 1024
+alias bench_size = 4096
 alias _simd_width = 16
+
+# do not attempt to run raw SIMD for sizes larger than 4096
+alias raw_simd_size = bench_size if bench_size < 4096 else 2
 
 
 fn matmul[
@@ -18,11 +21,10 @@ fn matmul[
 ](a: DTypePointer[type], b: DTypePointer[type], res_ptr: DTypePointer[type]):
     for i in range(size_ax):
         for j in range(size_by):
-            var sum = 0.0
             for k in range(size_ay):
-                sum += a[i * size_ay + k] * b[k * size_by + j]
-
-            res_ptr[i * size_by + j] = sum
+                res_ptr[i * size_by + j] += (
+                    a[i * size_ay + k] * b[k * size_by + j]
+                )
 
 
 fn matmul_simd[
@@ -161,8 +163,6 @@ fn test() raises:
         raise "Test failed (SIMD+Parallel)"
 
 
-
-
 fn bench(
     bench_id: StringRef, bench_time: Int = 5
 ) raises -> Dict[StringRef, benchmark.Report]:
@@ -209,13 +209,16 @@ fn bench(
     @always_inline
     @parameter
     fn worker_simd_raw():
-        var bres = matmul_simd_raw[bench_size, bench_size](inp_a, inp_b, dummy)
+        var bres = matmul_simd_raw[raw_simd_size, raw_simd_size](
+            inp_a, inp_b, dummy
+        )
         benchmark.keep(bres)  # do not optimize out
 
-    var r_simd_raw = benchmark.run[worker_simd_raw](
-        min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
-    )
-    reports["matmul_simd_raw"] = r_simd_raw
+    if raw_simd_size == bench_size:
+        var r_simd_raw = benchmark.run[worker_simd_raw](
+            min_runtime_secs=bench_time * 0.75, max_runtime_secs=bench_time
+        )
+        reports["matmul_simd_raw"] = r_simd_raw
 
     @always_inline
     @parameter

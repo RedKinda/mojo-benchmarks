@@ -6,8 +6,10 @@ import math
 from algorithm import vectorize
 
 alias type = DType.float64
-alias bench_size = 2048
+alias bench_size = 8192
 alias _simd_width = 16
+
+alias raw_simd_size = bench_size if bench_size < 8192 else 2
 
 """
 
@@ -149,7 +151,8 @@ fn bench(
     test()
 
     var arr = stack_allocation[bench_size, type]()
-    rand(arr, bench_size)
+    for i in range(bench_size):
+        arr[i] = random.random_float64()
 
     var reports = Dict[StringRef, benchmark.Report]()
     var dummy = stack_allocation[bench_size, type]()
@@ -181,14 +184,13 @@ fn bench(
     reports["softmax_simd_proper"] = r_simd
 
     # dirty SIMD benchmark - only do sizes of power two and less than some constant where it seems to crash
-    if math.log2[DType.float64, 1](bench_size) % 1 == 0 and bench_size < 16384:
-        var simd_arr = arr.load[width=bench_size](0)
-        var _r = softmax_simd[bench_size](simd_arr)
+    if math.log2[DType.float64, 1](bench_size) % 1 == 0 and bench_size < 8192:
+        var simd_arr = arr.load[width=raw_simd_size](0)
 
         @always_inline
         @parameter
         fn worker_simd():
-            var bres = softmax_simd[bench_size](simd_arr)
+            var bres = softmax_simd[raw_simd_size](simd_arr)
             benchmark.keep(bres)  # do not optimize out
 
         var r_simd = benchmark.run[worker_simd](

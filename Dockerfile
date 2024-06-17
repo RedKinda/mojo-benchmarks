@@ -13,7 +13,7 @@ RUN apt-get update \
 
 
 RUN curl https://get.modular.com | sh - 
-RUN modular install mojo
+RUN modular install --install-version 24.3.0 mojo
 ARG MODULAR_HOME="/root/.modular"
 ENV MODULAR_HOME=$MODULAR_HOME
 ENV PATH="$PATH:$MODULAR_HOME/pkg/packages.modular.com_mojo/bin"

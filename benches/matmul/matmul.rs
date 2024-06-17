@@ -117,7 +117,7 @@ fn main() {
         elapsed as f64 / 1000.0 / 1000.0 / times.len() as f64
     );
 
-    save_results(&times, "crc16");
+    save_results(&times, "matmul");
 }
 
 fn test() {

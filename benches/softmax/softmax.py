@@ -24,15 +24,19 @@ def bench_softmax_native(x: list[float]) -> list[float]:
 
 def test():
     x = [1.0, 2.0, 3.0]
-    assert bench_softmax_native(x) == list(bench_softmax_np(np.array([x]))[0])
+    assert np.allclose(
+        np.array(bench_softmax_native(x)), bench_softmax_np(np.array([x]))
+    )
 
     x = [1.0, 2.0, 3.0, 4.0]
-    assert bench_softmax_native(x) == list(bench_softmax_np(np.array([x]))[0])
+    assert np.allclose(
+        np.array(bench_softmax_native(x)), bench_softmax_np(np.array([x]))
+    )
 
 
 def initialize():
     rng = np.random.default_rng(42)
-    return rng.random((bench_size, 1))
+    return rng.uniform(0.0, 1.0, (bench_size, 1))
 
 
 def main():

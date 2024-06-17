@@ -47,8 +47,8 @@ def test():
 
 def initialize():
     rng = np.random.default_rng(42)
-    a = rng.random((bench_size, bench_size))
-    b = rng.random((bench_size, bench_size))
+    a = rng.uniform(0.0, 1.0, (bench_size, bench_size))
+    b = rng.uniform(0.0, 1.0, (bench_size, bench_size))
     return (a, b)
 
 

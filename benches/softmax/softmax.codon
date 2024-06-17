@@ -17,7 +17,7 @@ def bench_softmax_native(x: list[float]) -> list[float]:
 def initialize():
     arr = []
     for i in range(bench_size):
-        arr.append(random.uniform(0, 1))
+        arr.append(random.random())
     return arr
 
 

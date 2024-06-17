@@ -93,7 +93,7 @@ fn main() {
 
     println!(
         "Mean time: {}ms",
-        elapsed as f64 / times.len() as f64 * 1_000_000f64
+        elapsed as f64 / times.len() as f64 / 1_000_000f64
     );
 
     save_results(&times, "crc16");

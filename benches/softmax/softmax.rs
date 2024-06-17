@@ -8,7 +8,7 @@ use std::simd::num::SimdFloat;
 use std::simd::{f64x64, StdFloat};
 
 #[allow(non_upper_case_globals)]
-const bench_size: usize = 1000000;
+const bench_size: usize = 16384;
 
 const SIMD_COUNT: usize = bench_size / 64;
 
@@ -93,11 +93,11 @@ fn main() {
     let bench_time = std::env::args().nth(3).unwrap().parse::<usize>().unwrap();
     let bench_time_ns: f64 = bench_time as f64 * 1_000_000_000f64;
     test();
-    let mut random_arr = [0u8; bench_size * 8];
+    let mut random_arr = Box::new([0u8; bench_size * 8]);
     let mut f = File::open("/dev/urandom").unwrap();
-    f.read_exact(&mut random_arr).unwrap();
+    f.read_exact(&mut *random_arr).unwrap();
 
-    let mut arr = [0f64; bench_size];
+    let mut arr = Box::new([0f64; bench_size]);
     // convert random bytes to f64
     for i in 0..bench_size {
         arr[i] = f64::from_le_bytes([
@@ -110,6 +110,8 @@ fn main() {
             random_arr[i * 8 + 6],
             random_arr[i * 8 + 7],
         ]);
+        // make uniform
+        arr[i] /= f64::MAX;
     }
 
     softmax(black_box(&arr));
@@ -133,15 +135,15 @@ fn main() {
 
     println!(
         "Mean time: {}ms",
-        elapsed as f64 / times.len() as f64 * 1_000_000f64
+        elapsed as f64 / times.len() as f64 / 1_000_000f64
     );
 
     // prepare array of simd vectors
 
-    let mut simd_arr: [f64x64; SIMD_COUNT] = unsafe {
+    let mut simd_arr: Box<[f64x64; SIMD_COUNT]> = Box::new(unsafe {
         #[allow(invalid_value)]
         MaybeUninit::uninit().assume_init()
-    };
+    });
 
     for i in 0..SIMD_COUNT {
         simd_arr[i] = f64x64::from_slice(&arr[i * 64..]);
@@ -152,7 +154,7 @@ fn main() {
     let mut times_simd = vec![];
 
     loop {
-        black_box(softmax_simd(&arr));
+        black_box(softmax_simd(&simd_arr));
         let time = start.elapsed().as_nanos() as f64;
         if time > bench_time_ns {
             times_simd.push(time);
@@ -164,7 +166,7 @@ fn main() {
 
     println!(
         "Mean time: {}ms",
-        elapsed as f64 / times.len() as f64 * 1_000_000f64
+        elapsed as f64 / times.len() as f64 / 1_000_000f64
     );
 
     save_results(&times, "softmax_native");
