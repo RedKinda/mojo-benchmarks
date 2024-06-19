@@ -87,7 +87,7 @@ fn matmul_simd_parallel[
             vectorize[do_sum, simd_width, size=size_by]()
 
     parallelize[row](
-        size_ax, size_ax
+        size_ax
     )  # instead of a forloop over size_ax we parallelize
 
 
@@ -167,6 +167,7 @@ fn bench(
     bench_id: StringRef, bench_time: Int = 5
 ) raises -> Dict[StringRef, benchmark.Report]:
     test()
+    print("Mojo bench running", bench_id)
 
     var inp_a = DTypePointer[type].alloc(bench_size * bench_size)
     var inp_b = DTypePointer[type].alloc(bench_size * bench_size)
@@ -183,6 +184,8 @@ fn bench(
     @always_inline
     @parameter
     fn worker():
+        print("Running matmul")
+        memset_zero(dummy, bench_size * bench_size)
         var bres = matmul[bench_size, bench_size, bench_size](
             inp_a, inp_b, dummy
         )
@@ -196,6 +199,7 @@ fn bench(
     @always_inline
     @parameter
     fn worker_simd():
+        memset_zero(dummy, bench_size * bench_size)
         var bres = matmul_simd[_simd_width, bench_size, bench_size, bench_size](
             inp_a, inp_b, dummy
         )
@@ -209,6 +213,7 @@ fn bench(
     @always_inline
     @parameter
     fn worker_simd_raw():
+        memset_zero(dummy, bench_size * bench_size)
         var bres = matmul_simd_raw[raw_simd_size, raw_simd_size](
             inp_a, inp_b, dummy
         )
@@ -223,6 +228,7 @@ fn bench(
     @always_inline
     @parameter
     fn worker_simd_parallel():
+        memset_zero(dummy, bench_size * bench_size)
         var bres = matmul_simd_parallel[
             _simd_width, bench_size, bench_size, bench_size
         ](inp_a, inp_b, dummy)

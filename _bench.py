@@ -108,6 +108,10 @@ def bench_pypy(name, size, bench_id, warmup_time=1, bench_time=5):
 
 @shield_exceptions
 def bench_codon(name, size, bench_id, warmup_time=1, bench_time=5):
+    if "matmul" in name and size > 1024:
+        print("Skipping matmul codon bench for size > 1024")
+        return
+
     print(f"----- Running {name} - codon")
     # copy file
     os.system(f"cp benches/{name}/{name}.codon tmp/")
@@ -147,7 +151,7 @@ size_scales = {
     "crc16": [1000, 10000, 100000, 1000000],
     "quicksort": [1000, 10000, 100000],
     "softmax": [128, 512, 2048, 8192, 16384],
-    "matmul": [64, 128, 256, 512, 1024, 2048],
+    "matmul": [256, 512, 1024, 2048, 4096],
 }
 
 

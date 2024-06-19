@@ -6,7 +6,7 @@ type Data = u8;
 #[allow(non_upper_case_globals)]
 const bench_size: usize = 1000000;
 
-fn quicksort(data: &mut Vec<Data>, left: isize, right: isize) {
+fn quicksort(data: &mut [Data], left: isize, right: isize) {
     if left >= right {
         return;
     }

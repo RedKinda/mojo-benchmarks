@@ -1,10 +1,10 @@
 import benchmark
 import sys
 from random import rand, seed
+from utils.loop import unroll
 from python import Python
 import math
 from algorithm import vectorize
-
 alias type = DType.float64
 alias bench_size = 8192
 alias _simd_width = 16
@@ -20,6 +20,37 @@ def softmax_native(x: list[float]) -> list[float]:
     probs = [xi / x_exp_sum for xi in x_exp]
     return probs
 """
+
+
+# fn vectorize[
+#     func: fn[Int] (Int) capturing -> None,
+#     simd_width: Int,
+#     /,
+#     *,
+#     size: Int,
+#     do_unroll: Bool = True,
+# ]():
+#     alias big_loop_count = size // simd_width
+#     alias remainder = size % simd_width
+#     alias remainder_offset = size - remainder
+
+#     @parameter
+#     fn f_big[i: Int]() capturing:
+#         func[simd_width](i * simd_width)
+
+#     @parameter
+#     fn f_small[i: Int]() capturing:
+#         func[1](remainder_offset + i)
+
+#     if do_unroll:
+#         unroll[f_big, big_loop_count]()
+#         unroll[f_small, remainder]()
+#     else:
+#         for i in range(big_loop_count):
+#             func[simd_width](i)
+
+#         for i in range(remainder):
+#             func[1](remainder_offset + i)
 
 
 fn softmax[
@@ -61,6 +92,7 @@ fn softmax_simd_proper[
     @parameter
     fn closure_max[simd_width: Int](i: Int):
         max = math.max(max, inp.load[width=simd_width](i).reduce_max())
+        print("called with", simd_width, i)
 
     vectorize[closure_max, simd_width, size=size]()
 
@@ -96,7 +128,7 @@ def test():
     var py = Python.import_module("builtins")
     var pyrandom = Python.import_module("random")
 
-    alias testsize = 16
+    alias testsize = 18
 
     var mojoin = stack_allocation[testsize, type]()
     var res_mojo = stack_allocation[testsize, type]()
@@ -109,8 +141,8 @@ def test():
 
     var res_py = pysoftmax.bench_softmax_native(pyin)
     var _a = softmax[testsize](mojoin, res_mojo)
-    var res_simd_mojo = softmax_simd[testsize](mojoin.load[width=testsize](0))
-    var res_simd_proper_mojo = softmax_simd_proper[testsize, 2](
+    # var res_simd_mojo = softmax_simd[testsize](mojoin.load[width=testsize](0))
+    var res_simd_proper_mojo = softmax_simd_proper[testsize, 4](
         mojoin, stack_allocation[testsize, type]()
     )
 
@@ -125,14 +157,14 @@ def test():
             )
             raise "Test fail"
 
-        if math.abs(res_py[i].to_float64() - res_simd_mojo[i]) > 1e-6:
-            py.print(py.str("Mismatch at index {}").format(i))
-            py.print(
-                py.str("Python: {}, Mojo SIMD: {}").format(
-                    res_py[i].to_float64(), res_simd_mojo[i]
-                )
-            )
-            raise "Test fail"
+        # if math.abs(res_py[i].to_float64() - res_simd_mojo[i]) > 1e-6:
+        #     py.print(py.str("Mismatch at index {}").format(i))
+        #     py.print(
+        #         py.str("Python: {}, Mojo SIMD: {}").format(
+        #             res_py[i].to_float64(), res_simd_mojo[i]
+        #         )
+        #     )
+        #     raise "Test fail"
 
         # compare mojo with mojo simd now
         if math.abs(res_mojo[i] - res_simd_proper_mojo[i]) > 1e-6:

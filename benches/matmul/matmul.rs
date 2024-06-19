@@ -64,13 +64,13 @@ fn main() {
     let bench_time_ns: f64 = bench_time as f64 * 1_000_000_000f64;
     test();
     // arr is u8 1000000 of random elements allocated on heap
-    let mut arr = [0f64; bench_size * bench_size];
-    let mut arr2 = [0f64; bench_size * bench_size];
+    let mut arr = Box::new([0f64; bench_size * bench_size]);
+    let mut arr2 = Box::new([0f64; bench_size * bench_size]);
     let mut f = File::open("/dev/urandom").unwrap();
-    let mut buf = [0u8; bench_size * bench_size * 8];
-    let mut buf2 = [0u8; bench_size * bench_size * 8];
-    f.read_exact(&mut buf).unwrap();
-    f.read_exact(&mut buf2).unwrap();
+    let mut buf = Box::new([0u8; bench_size * bench_size * 8]);
+    let mut buf2 = Box::new([0u8; bench_size * bench_size * 8]);
+    f.read_exact(&mut *buf).unwrap();
+    f.read_exact(&mut *buf2).unwrap();
 
     // uniform random u8 -> f64
     for i in buf.chunks_exact(8) {
@@ -96,12 +96,14 @@ fn main() {
     // benchmark this 1000 times, get mean
     let start = std::time::Instant::now();
     let mut times = vec![];
+    let mut res = Box::new([0f64; bench_size * bench_size]);
 
     loop {
-        let mut res = [0f64; bench_size * bench_size];
+        // zero out res
+        res.fill(0.0);
         black_box(matmul::<bench_size, bench_size, bench_size>(
-            (&arr, &arr2),
-            &mut res,
+            (&*arr, &*arr2),
+            &mut *res,
         ));
         let time = start.elapsed().as_nanos() as f64;
         if time > bench_time_ns {
